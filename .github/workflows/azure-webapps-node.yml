@@ -1,13 +1,11 @@
-name: Angular CI Pipeline
+name: Angular CI to AWS S3
 
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,25 +17,26 @@ jobs:
         with:
           node-version: 18
 
-      - name: Cache Node Modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Install Dependencies
         run: npm install
 
-      - name: Run Tests (Headless)
+      - name: Run Tests
         run: npm test -- --watch=false --browsers=ChromeHeadless
 
-      - name: Build Angular App (SPA mode)
-        run: ng build --configuration production
+      - name: Build Angular App (SPA)
+        run: ng build --configuration production --no-prerender
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
+      # -------------------------------------
+      #         DEPLOY SECTION
+      # -------------------------------------
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: angular-dist
-          path: dist/
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload to S3 Bucket
+        run: |
+          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }} --delete
