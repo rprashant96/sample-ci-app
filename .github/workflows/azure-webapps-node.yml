@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: Angular CI Pipeline
 
 on:
   push:
@@ -30,14 +30,14 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Run Tests
+      - name: Run Tests (Headless)
         run: npm test -- --watch=false --browsers=ChromeHeadless
 
-      - name: Build App
-        run: npm run build --if-present
+      - name: Build Angular App (No Prerender)
+        run: npm run build -- --configuration production --no-prerender
 
-      - name: Upload Artifact
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-output
+          name: angular-dist
           path: dist/
