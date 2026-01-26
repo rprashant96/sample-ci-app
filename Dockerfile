@@ -1,13 +1,39 @@
-FROM node:20
+# ======================
+# 1) BUILD ANGULAR APP
+# ======================
+FROM node:22-alpine AS build
+
+# Set working directory
 WORKDIR /app
 
+# Copy package files first (for better layer caching)
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
+# Install Angular CLI globally (needed for ng command)
+RUN npm install -g @angular/cli@latest
+
+# Copy rest of the app source
 COPY . .
 
-RUN npx ng build --configuration=production --browser
-RUN npx ng build --configuration=production --server
+# Build Angular in production mode
+RUN ng build --configuration=production
 
-EXPOSE 4000
-CMD ["node", "dist/YOUR_APP/server/main.js"]
+# ======================
+# 2) RUN USING NGINX
+# ======================
+FROM nginx:alpine
+
+# Remove default nginx static content
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy compiled Angular files
+COPY --from=build /app/dist/ /usr/share/nginx/html/
+
+# Expose container port
+EXPOSE 80
+
+# Start NGINX
+CMD ["nginx", "-g", "daemon off;"]
