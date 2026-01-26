@@ -1,4 +1,4 @@
-name: Angular Docker CI/CD
+name: Angular 18 Docker CI/CD
 
 on:
   push:
