@@ -18,7 +18,7 @@ RUN npm install \
     typescript \
     zone.js \
     rxjs \
-    --save-dev
+    --save-dev --force
 
 # Copy the rest of your app source code
 COPY . .
