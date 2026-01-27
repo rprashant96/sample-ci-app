@@ -1,34 +1,59 @@
-name: Angular 18 Docker CI/CD
+name: CI/CD - Angular Docker K8s
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-  build-and-push:
+  build-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Install Dependencies
+      run: npm ci
 
-      - name: Build & Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/angular-app:latest
-            ${{ secrets.DOCKER_USERNAME }}/angular-app:${{ github.run_number }}
+    - name: Build Angular Production
+      run: npm run build -- --configuration=production
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build Docker Image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/angular-app:latest .
+
+    - name: Push Docker Image
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/angular-app:latest
+
+    # ---- Kubernetes Deployment ----
+
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+
+    - name: Setup kubeconfig
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
+      shell: bash
+
+    - name: Deploy to Kubernetes
+      env:
+        KUBECONFIG: kubeconfig
+      run: |
+        kubectl apply -f angular-deployment.yaml
+        kubectl set image deployment/angular-app angular-container=${{ secrets.DOCKER_USERNAME }}/angular-app:latest
+        kubectl rollout restart deployment/angular-app
