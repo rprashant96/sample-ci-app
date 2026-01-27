@@ -51,9 +51,7 @@ jobs:
       shell: bash
 
     - name: Deploy to Kubernetes
-      env:
-        KUBECONFIG: kubeconfig
       run: |
-        kubectl apply -f angular-deployment.yaml
-        kubectl set image deployment/angular-app angular-container=${{ secrets.DOCKER_USERNAME }}/angular-app:latest
-        kubectl rollout restart deployment/angular-app
+        kubectl apply -f angular-deployment.yaml --validate=false --kubeconfig=kubeconfig
+        kubectl set image deployment/angular-app angular-container=${{ secrets.DOCKER_USERNAME }}/angular-app:latest --kubeconfig=kubeconfig
+        kubectl rollout restart deployment/angular-app --kubeconfig=kubeconfig
