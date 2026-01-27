@@ -1,37 +1,13 @@
-# -----------------------
-# 1) BUILD ANGULAR APP
-# -----------------------
-FROM node:20-alpine AS build
-
+# Step 1: Build Angular
+FROM node:20 AS build
 WORKDIR /app
-
-# Install build dependencies
-RUN apk add --no-cache python3 make g++ bash git
-
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy source code
+RUN npm ci
 COPY . .
+RUN npm run build --configuration production
 
-# Build Angular for production
-RUN npm run build
-
-# -----------------------
-# 2) SERVE WITH NGINX
-# -----------------------
+# Step 2: Serve via NGINX
 FROM nginx:alpine
-
-# Remove default nginx html
-RUN rm -rf /usr/share/nginx/html/*
-
-# Copy dist app
-COPY --from=build /app/dist/ /usr/share/nginx/html/
-
-# Expose HTTP port
+COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
