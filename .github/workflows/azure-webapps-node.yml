@@ -39,19 +39,15 @@ jobs:
 
     # ---- Kubernetes Deployment ----
 
+    - uses: actions/checkout@v4
+
     - name: Install kubectl
-      run: |
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        chmod +x kubectl
-        sudo mv kubectl /usr/local/bin/
+      uses: azure/setup-kubectl@v4
 
-    - name: Setup kubeconfig
-      run: |
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > kubeconfig
-      shell: bash
+    - name: Create kind cluster
+      uses: helm/kind-action@v1
 
-    - name: Deploy to Kubernetes
+    - name: Deploy app
       run: |
-        kubectl apply -f angular-deployment.yaml --validate=false --kubeconfig=kubeconfig
-        kubectl set image deployment/angular-app angular-container=${{ secrets.DOCKER_USERNAME }}/angular-app:latest --kubeconfig=kubeconfig
-        kubectl rollout restart deployment/angular-app --kubeconfig=kubeconfig
+          kubectl apply -f angular-deployment.yaml
+          kubectl get pods
